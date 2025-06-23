@@ -9,17 +9,20 @@ on:
 
 jobs:
   build:
-  runs-on: ubuntu-20.04
+    runs-on: ubuntu-20.04
+
+    env:
+      ENABLE_VNDKLITE: true  # Optional: Remove if you don't want VNDKLite
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-           - name: Install dependencies
+      - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y git aria2 python2 python3 python3-pip unzip
           pip3 install --upgrade pip
-
 
       - name: Clone ErfanGSI Builder
         run: git clone --depth=1 https://github.com/erfanoabdi/ErfanGSIs.git ErfanGSIs
@@ -27,10 +30,10 @@ jobs:
       - name: Build GSI
         run: |
           cd ErfanGSIs
-          bash setup.sh ${{ github.event.inputs.rom_url }}
+          bash setup.sh "${{ github.event.inputs.rom_url }}"
 
       - name: Upload GSI
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
-          name: GSI
-          path: ErfanGSIs/output/*.img
+          name: ErfanGSI-output
+          path: ErfanGSIs/out/*.img
