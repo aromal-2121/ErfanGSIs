@@ -13,12 +13,12 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Install dependencies (without python2)
+      - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y git aria2 python3 python3-pip unzip build-essential wget
+          sudo apt install -y git aria2 python3 python3-pip unzip build-essential wget simg2img img2simg
           pip3 install --upgrade pip
 
       - name: Install Python 2.7 manually
@@ -28,18 +28,25 @@ jobs:
           cd Python-2.7.18
           ./configure --enable-optimizations
           make -j$(nproc)
-          sudo make altinstall  # This installs as python2.7 (not as 'python2')
+          sudo make altinstall
+          # Create symlink for python2 compatibility
+          sudo ln -s /usr/local/bin/python2.7 /usr/local/bin/python2
 
       - name: Clone ErfanGSI Builder
         run: git clone --depth=1 https://github.com/erfanoabdi/ErfanGSIs.git ErfanGSIs
 
+      - name: Download and verify ROM
+        run: |
+          aria2c -x 16 -s 16 "${{ github.event.inputs.rom_url }}" -o rom.zip
+          unzip -l rom.zip || { echo "Invalid ROM zip file"; exit 1; }
+
       - name: Build GSI
         run: |
           cd ErfanGSIs
-          bash setup.sh ${{ github.event.inputs.rom_url }}
+          bash setup.sh ../rom.zip
 
       - name: Upload GSI artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: GSI
-          path: ErfanGSIs/output
+          name: gsi-output
+          path: ErfanGSIs/output/*.img
