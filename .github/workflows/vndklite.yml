@@ -1,0 +1,42 @@
+name: Convert GSI to VNDKLITE
+
+on:
+  workflow_dispatch:
+    inputs:
+      ARCH:
+        description: 'Architecture (64 or 32)'
+        required: true
+        default: '64'
+      IMAGE_URL:
+        description: 'Direct URL to system.img'
+        required: true
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    env:
+      ARCH: ${{ github.event.inputs.ARCH }}
+      IMAGE_URL: ${{ github.event.inputs.IMAGE_URL }}
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y attr e2fsprogs wget unzip python2
+
+      - name: Download system.img
+        run: |
+          wget "$IMAGE_URL" -O system.img
+
+      - name: Convert to VNDKLITE
+        run: |
+          bash vndklite/lite-adapter.sh $ARCH system.img
+
+      - name: Upload result
+        uses: actions/upload-artifact@v3
+        with:
+          name: vndklite-gsi
+          path: s.img
