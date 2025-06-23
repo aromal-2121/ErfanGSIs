@@ -7,6 +7,10 @@ on:
         description: 'Architecture (64 or 32)'
         required: true
         default: '64'
+        type: choice
+        options:
+          - 64
+          - 32
       IMAGE_URL:
         description: 'Direct URL to system.img'
         required: true
@@ -20,19 +24,34 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y attr e2fsprogs wget unzip python2
+          sudo apt-get install -y attr e2fsprogs wget unzip simg2img img2simg
+
+      - name: Install Python 2.7 manually
+        run: |
+          wget https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz
+          tar xzf Python-2.7.18.tgz
+          cd Python-2.7.18
+          ./configure --enable-optimizations
+          make -j$(nproc)
+          sudo make altinstall
+          sudo ln -s /usr/local/bin/python2.7 /usr/local/bin/python2
 
       - name: Download system.img
         run: |
           wget "$IMAGE_URL" -O system.img
+          file system.img | grep -q "ext[2-4]\|f2fs" || { echo "Invalid system.img"; exit 1; }
 
       - name: Convert to VNDKLITE
         run: |
+          if [ ! -f vndklite/lite-adapter.sh ]; then
+            echo "lite-adapter.sh not found in vndklite/"
+            exit 1
+          fi
           bash vndklite/lite-adapter.sh $ARCH system.img
 
       - name: Upload result
@@ -40,3 +59,4 @@ jobs:
         with:
           name: vndklite-gsi
           path: s.img
+        if: ${{ success() }}
