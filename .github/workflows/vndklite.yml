@@ -27,9 +27,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y attr e2fsprogs wget unzip simg2img img2simg
+  run: |
+    sudo apt-get update
+    sudo apt-get install -y attr e2fsprogs wget unzip android-sdk-libsparse-utils
 
       - name: Install Python 2.7 manually
         run: |
