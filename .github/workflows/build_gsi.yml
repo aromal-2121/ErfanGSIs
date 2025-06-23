@@ -9,27 +9,24 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-20.04
-
-    env:
-      ENABLE_VNDKLITE: true  # Optional: Remove if you don't want VNDKLite
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
-     - name: Install dependencies
-  run: |
-    sudo apt update
-    sudo apt install -y git aria2 python3 python3-pip unzip curl build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev
-    curl -O https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz
-    tar -xf Python-2.7.18.tgz
-    cd Python-2.7.18
-    ./configure --enable-optimizations
-    make -j$(nproc)
-    sudo make altinstall
-    cd ..
-    python2.7 --version
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git aria2 python3 python3-pip unzip curl build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev
+          curl -O https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz
+          tar -xf Python-2.7.18.tgz
+          cd Python-2.7.18
+          ./configure --enable-optimizations
+          make -j$(nproc)
+          sudo make altinstall
+          cd ..
+          python2.7 --version
 
       - name: Clone ErfanGSI Builder
         run: git clone --depth=1 https://github.com/erfanoabdi/ErfanGSIs.git ErfanGSIs
@@ -37,10 +34,10 @@ jobs:
       - name: Build GSI
         run: |
           cd ErfanGSIs
-          bash setup.sh "${{ github.event.inputs.rom_url }}"
+          bash setup.sh ${{ github.event.inputs.rom_url }}
 
       - name: Upload GSI
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
-          name: ErfanGSI-output
-          path: ErfanGSIs/out/*.img
+          name: GSI
+          path: ErfanGSIs/output/*
