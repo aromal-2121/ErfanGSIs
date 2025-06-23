@@ -36,7 +36,7 @@ jobs:
           bash vndklite/lite-adapter.sh $ARCH system.img
 
       - name: Upload result
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: vndklite-gsi
           path: s.img
