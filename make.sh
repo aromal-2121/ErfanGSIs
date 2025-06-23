@@ -17,6 +17,9 @@ if [ "$3" == "" ]; then
     exit 1
 fi
 
+# Optional VNDKLITE mode
+ENABLE_VNDKLITE=${ENABLE_VNDKLITE:-false}
+
 LOCALDIR=`cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd`
 sourcepath=$1
 romtype=$2
@@ -60,13 +63,11 @@ if [ "$flag" == "false" ]; then
     exit 1
 fi
 
-# Setup source system partition
 systempath=$sourcepath
 if [[ -e "$sourcepath/mounted.txt" ]]; then
     systempath=$sourcepath/system
 fi
 
-# Detect Source type, AB or not
 sourcetype="Aonly"
 if [[ -e "$sourcepath/system" ]]; then
     sourcetype="AB"
@@ -117,14 +118,12 @@ else
     echo "ro.build.system_root_image=true" >> "$systemdir/system/build.prop"
 fi
 
-# Detect is the src treble ro.treble.enabled=true
 istreble=`cat $systemdir/system/build.prop | grep ro.treble.enabled | cut -d "=" -f 2`
 if [[ ! "$istreble" == "true" ]]; then
     echo "The source is not treble supported"
     exit 1
 fi
 
-# Detect Source API level
 if grep -q ro.build.version.release_or_codename $systemdir/system/build.prop; then
     sourcever=`grep ro.build.version.release_or_codename $systemdir/system/build.prop | cut -d "=" -f 2`
 else
@@ -145,23 +144,18 @@ if [ "$flag" == "false" ]; then
     exit 1
 fi
 
-# Detect rom folder again
 if [[ ! -d "$romsdir/$sourcever/$romtype" ]]; then
     echo "$romtype is not supported rom for android $sourcever"
     exit 1
 fi
 
-# Detect arch
 if [[ ! -f "$systemdir/system/lib64/libandroid.so" ]]; then
     echo "32bit source detected, weird flex but ok!"
-    # do something here?
 fi
 
-# Debloat
 $romsdir/$sourcever/$romtype/debloat.sh "$systemdir/system" 2>/dev/null
 $romsdir/$sourcever/$romtype/$romtypename/debloat.sh "$systemdir/system" 2>/dev/null
 
-# Resign to AOSP keys
 if [[ ! -e $romsdir/$sourcever/$romtype/$romtypename/DONTRESIGN ]]; then
     if [[ ! -e $romsdir/$sourcever/$romtype/DONTRESIGN ]]; then
         echo "Resigning to AOSP keys"
@@ -176,7 +170,6 @@ if [[ ! -e $romsdir/$sourcever/$romtype/$romtypename/DONTRESIGN ]]; then
     fi
 fi
 
-# Start patching
 echo "Patching started..."
 $scriptsdir/fixsymlinks.sh "$systemdir/system" 2>/dev/null
 $scriptsdir/nukeABstuffs.sh "$systemdir/system" 2>/dev/null
@@ -198,7 +191,6 @@ if [ "$outputtype" == "Aonly" ]; then
     $romsdir/$sourcever/$romtype/makeA.sh "$systemdir/system" 2>/dev/null
 fi
 
-# Fixing environ
 if [ "$outputtype" == "Aonly" ]; then
     if [[ ! $(ls "$systemdir/system/etc/init/" | grep *environ*) ]]; then
         echo "Generating environ.rc"
@@ -237,7 +229,6 @@ displayid2=$(echo "$displayid" | sed 's/\./\\./g')
 bdisplay=$(grep "$displayid" $systemdir/system/build.prop | sed 's/\./\\./g; s:/:\\/:g; s/\,/\\,/g; s/\ /\\ /g')
 sed -i "s/$bdisplay/$displayid2=Built\.with\.ErfanGSI\.Tools/" $systemdir/system/build.prop
 
-# Getting system size and add approximately 5% on it just for free space
 systemsize=`du -sk $systemdir | awk '{$1*=1024;$1=int($1*1.05);printf $1}'`
 bytesToHuman() {
     b=${1:-0}; d=''; s=0; S=(Bytes {K,M,G,T,P,E,Z,Y}iB)
@@ -251,11 +242,18 @@ bytesToHuman() {
 echo "Raw Image Size: $(bytesToHuman $systemsize)" >> "$outputinfo"
 
 echo "Creating Image: $outputimagename"
-# Use ext4fs to make image in P or older!
 if [ "$sourcever" == "9" ]; then
     useold="--old"
 fi
 $scriptsdir/mkimage.sh $systemdir $outputtype $systemsize $output $useold > $tempdir/mkimage.log
+
+# VNDKLITE POST-PROCESSING
+if [ "$ENABLE_VNDKLITE" == "true" ]; then
+    echo "Running VNDKLite conversion..."
+    bash "$LOCALDIR/vndklite/lite-adapter.sh" 64 "$output"
+    mv s.img "${output%.img}-vndklite.img"
+    echo "VNDKLite image created: ${output%.img}-vndklite.img"
+fi
 
 echo "Remove Temp dir"
 rm -rf "$tempdir"
