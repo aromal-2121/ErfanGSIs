@@ -9,26 +9,26 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Don't worry about the name; it may be 24.04
 
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Install dependencies
+      - name: Install dependencies (except python2)
         run: |
           sudo apt update
-          sudo apt install -y git aria2 python3 python3-pip unzip curl build-essential \
-              zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev \
-              libreadline-dev libffi-dev
-          curl -O https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz
-          tar -xf Python-2.7.18.tgz
+          sudo apt install -y git aria2 python3 python3-pip unzip build-essential wget
+          pip3 install --upgrade pip
+
+      - name: Manually install Python 2.7
+        run: |
+          wget https://www.python.org/ftp/python/2.7.18/Python-2.7.18.tgz
+          tar xzf Python-2.7.18.tgz
           cd Python-2.7.18
           ./configure --enable-optimizations
           make -j$(nproc)
-          sudo make altinstall
-          cd ..
-          python2.7 --version
+          sudo make altinstall  # installs as python2.7 without overwriting python3
 
       - name: Clone ErfanGSI Builder
         run: git clone --depth=1 https://github.com/erfanoabdi/ErfanGSIs.git ErfanGSIs
@@ -38,8 +38,8 @@ jobs:
           cd ErfanGSIs
           bash setup.sh ${{ github.event.inputs.rom_url }}
 
-      - name: Upload GSI
+      - name: Upload GSI output
         uses: actions/upload-artifact@v3
         with:
           name: GSI
-          path: ErfanGSIs/output/*
+          path: ErfanGSIs/output
