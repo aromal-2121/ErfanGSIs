@@ -41,12 +41,18 @@ jobs:
           sudo make altinstall
           sudo ln -s /usr/local/bin/python2.7 /usr/local/bin/python2
 
-      - name: Download and extract system.img.xz
+            - name: Download and extract system.img.xz
         run: |
           wget "$IMAGE_URL" -O system.img.xz
           unxz system.img.xz
           mv system.img system.img.raw
-          file system.img.raw | grep -q "ext[2-4]\|f2fs" || { echo "Invalid system.img"; exit 1; }
+          # Check if sparse, convert if needed
+          if file system.img.raw | grep -q "Android sparse image"; then
+            simg2img system.img.raw system.img
+          else
+            mv system.img.raw system.img
+          fi
+          file system.img | grep -q "ext[2-4]\|f2fs" || { echo "Invalid system.img"; exit 1; }
 
       - name: Convert to VNDKLITE
         run: |
