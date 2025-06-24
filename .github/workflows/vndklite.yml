@@ -12,7 +12,7 @@ on:
           - 64
           - 32
       IMAGE_URL:
-        description: 'Direct URL to system.img'
+        description: 'Direct URL to system.img.xz'
         required: true
 
 jobs:
@@ -27,9 +27,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install dependencies
-  run: |
-    sudo apt-get update
-    sudo apt-get install -y attr e2fsprogs wget unzip android-sdk-libsparse-utils
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y attr e2fsprogs wget unzip android-sdk-libsparse-utils
 
       - name: Install Python 2.7 manually
         run: |
@@ -41,24 +41,23 @@ jobs:
           sudo make altinstall
           sudo ln -s /usr/local/bin/python2.7 /usr/local/bin/python2
 
-    - name: Download and extract system.img.xz
-  run: |
-    wget "$IMAGE_URL" -O system.img.xz
-    unxz system.img.xz
-    mv system.img system.img.raw
-    file system.img.raw | grep -q "ext[2-4]\|f2fs" || { echo "Invalid system.img"; exit 1; }
-      
+      - name: Download and extract system.img.xz
+        run: |
+          wget "$IMAGE_URL" -O system.img.xz
+          unxz system.img.xz
+          mv system.img system.img.raw
+          file system.img.raw | grep -q "ext[2-4]\|f2fs" || { echo "Invalid system.img"; exit 1; }
+
       - name: Convert to VNDKLITE
         run: |
           if [ ! -f vndklite/lite-adapter.sh ]; then
             echo "lite-adapter.sh not found in vndklite/"
             exit 1
           fi
-          bash vndklite/lite-adapter.sh $ARCH system.img
+          bash vndklite/lite-adapter.sh $ARCH system.img.raw
 
       - name: Upload result
         uses: actions/upload-artifact@v4
         with:
           name: vndklite-gsi
           path: s.img
-        if: ${{ success() }}
